@@ -16,7 +16,7 @@ export class Player implements StageObject
   constructor(readonly stage: Stage, readonly controlObserver: ControlObserver) {
     this.state = createState<ObjectState>({
       isMoving: false,
-      position: this.stage.positioner(this, [HorizPosition.center, VertPosition.center]),
+      position: this.stage.positioner(this, [HorizPosition.center, VertPosition.bottom]),
       velocity: 150
     });
 
