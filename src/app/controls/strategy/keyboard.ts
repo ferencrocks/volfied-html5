@@ -45,6 +45,8 @@ export const keyboardArrow$: Observable<Direction> =
       .pipe( filter(isKeyboardArrow) )
       .subscribe((keyEvt: KeyboardEvent) => {
         keyEvt.stopImmediatePropagation();
+        keyEvt.preventDefault();
+
         const direction = eventToDirection(keyEvt);
 
         if (keyEvt.type === 'keydown') {

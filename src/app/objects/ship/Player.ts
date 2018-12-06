@@ -1,38 +1,41 @@
 //@ts-ignore
 import Tween from '@tweenjs/tween.js';
 
-import {Position, Size, StageObject, ObjectState} from "../StageObject";
+import {ObjectState, Size, StageObject, ObjectPosition} from "../StageObject";
 import {Canvas} from "Canvas";
 import {Stage} from "Stage/Stage";
 import {ControlObserver} from "Control/ControlObserver";
 import {Direction} from "Control/Direction";
 
+import {State, createState} from '../../generic/State';
+import {HorizPosition, VertPosition} from "Object/StageObjectPositioner";
+
+
 export class Player implements StageObject
 {
   constructor(readonly stage: Stage, readonly controlObserver: ControlObserver) {
+    this.state = createState<ObjectState>({
+      isMoving: false,
+      position: this.stage.positioner(this, [HorizPosition.center, VertPosition.center]),
+      velocity: 150
+    });
+
     this.observeMovement();
   }
-
-  position: Position = {
-    x: 0,
-    y: 0
-  };
 
   size: Size = {
     height: 25,
     width: 25
   };
 
-  state: ObjectState = {
-    velocity: 150,
-    isMoving: false
-  };
+  state: State<ObjectState>;
+
 
   draw(canvas: Canvas) {
     const ctx = canvas.context;
 
     ctx.beginPath();
-    ctx.arc(this.position.x, this.position.y, this.size.width / 2, 0, Math.PI * 2);
+    ctx.arc(this.state.position.x, this.state.position.y, this.size.width / 2, 0, Math.PI * 2);
     ctx.fillStyle = "white";
     ctx.fill();
   }
@@ -41,17 +44,21 @@ export class Player implements StageObject
     let lastDirection: Direction | null = null;
     let tween: any;
 
-    const animate = (dx: number, dy: number) => new Tween.Tween(this.position)
+    const animate = (dx: number, dy: number) => new Tween.Tween(this.state.position)
       .to({
-        x: this.position.x + dx * this.stage.xUnit,
-        y: this.position.y + dy * this.stage.yUnit
+        x: this.state.position.x + dx * this.stage.xUnit,
+        y: this.state.position.y + dy * this.stage.yUnit
       }, this.state.velocity)
       .onStart(() => {
-        this.state.isMoving = true;
+        this.state.mutate({ isMoving: true });
       })
       .onComplete(() => {
-        this.state.isMoving = false;
-        tween = null;
+        this.state.mutate({ isMoving: false });
+      })
+      .onUpdate((tmpPos: ObjectPosition) => {
+        this.state.mutate({
+          position: { x: tmpPos.x, y: tmpPos.y }
+        });
       })
       .start();
 

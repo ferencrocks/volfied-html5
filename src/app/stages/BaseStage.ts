@@ -1,6 +1,7 @@
 import { Stage } from "./Stage";
 import { StageObject } from "Object/StageObject";
 import { Canvas } from "Canvas";
+import { StageObjectPositioner, StageObjectPositionerConstructor } from "Object/StageObjectPositioner";
 
 
 const X_UNITS = 40;
@@ -13,10 +14,12 @@ export abstract class BaseStage implements Stage
 
   readonly objects: Set<StageObject> = new Set<StageObject>();
 
-  constructor(readonly canvas: Canvas) {
+  readonly positioner: StageObjectPositioner;
 
+
+  constructor(readonly canvas: Canvas, positionerConstructor: StageObjectPositionerConstructor) {
+    this.positioner = positionerConstructor(this);
   }
-
 
   draw() {
     this.drawCanvas();

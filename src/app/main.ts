@@ -6,7 +6,8 @@ import { keyDown$, arrowWithSpaceDown$ } from "./controls/strategy/keyboard";
 import { Canvas } from "Canvas";
 import { Player } from "Object/ship/Player";
 
-import Stage01 from './stages/01/Stage01';
+import Stage01 from 'Stage/01/Stage01';
+import { createStageObjectPosition } from 'Object/StageObjectPositioner';
 
 import {ControlObserver, createControlObserver} from "Control/ControlObserver";
 import { observers } from "Control/strategy/keyboard";
@@ -19,7 +20,8 @@ export function init() {
 
   const controlObserver: ControlObserver = createControlObserver(observers);
 
-  const stage = new Stage01(canvas);
+  const stage = new Stage01(canvas, createStageObjectPosition);
+
   const player = new Player(stage, controlObserver);
 
   stage.mount(player);

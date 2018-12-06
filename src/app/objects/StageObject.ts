@@ -1,10 +1,10 @@
 import { Canvas } from "Canvas";
-import { Stage } from "Stage/Stage";
+import { Coordinate } from "Canvas/Coordinate";
 
-export interface Position {
-  x: number;
-  y: number;
-}
+import { Stage } from "Stage/Stage";
+import { State } from "../generic/State";
+
+export interface ObjectPosition extends Coordinate {}
 
 export interface Size {
   height: number;
@@ -14,14 +14,15 @@ export interface Size {
 
 export interface StageObject
 {
-  readonly position: Position;
   readonly size: Size;
   readonly stage: Stage;
+  readonly state: State<ObjectState>
 
   draw(canvas: Canvas): void;
 }
 
 export interface ObjectState {
-  isMoving: boolean,
-  velocity: number // distance per second
+  readonly isMoving: boolean,
+  readonly position: ObjectPosition,
+  readonly velocity: number // distance per second
 }
