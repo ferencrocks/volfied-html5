@@ -4,6 +4,7 @@ import { Canvas } from "Canvas";
 import { StageObjectPositioner, StageObjectPositionerConstructor } from "Object/StageObjectPositioner";
 import { ICoordinate } from "Canvas/Coordinate";
 import { CoordinateSystem } from "Canvas/CoordinateSystem";
+import {Edge, IEdge} from "Canvas/Edge";
 
 
 export abstract class BaseStage implements Stage
@@ -12,19 +13,40 @@ export abstract class BaseStage implements Stage
 
   readonly positioner: StageObjectPositioner;
 
-  protected vertices: Array<ICoordinate>;
+  protected _edges: Array<IEdge> = [];
 
 
   constructor(readonly canvas: Canvas, readonly coordinateSystem: CoordinateSystem, positionerConstructor: StageObjectPositionerConstructor) {
     this.positioner = positionerConstructor(this);
 
-    // Initialize vertices
-    this.vertices = [
-      this.coordinateSystem.topLeftVertexCoord,
-      this.coordinateSystem.topRightVertexCoord,
-      this.coordinateSystem.bottomRightVertexCoord,
-      this.coordinateSystem.bottomLeftVertexCoord
+    // Initialize edges
+    const localCoord = coordinateSystem.toLocalCoord.bind(coordinateSystem);
+    this._edges = [
+      new Edge(
+        localCoord(this.coordinateSystem.topLeftVertexCoord),
+        localCoord(this.coordinateSystem.topRightVertexCoord)
+      ),
+      new Edge(
+        localCoord(this.coordinateSystem.topRightVertexCoord),
+        localCoord(this.coordinateSystem.bottomRightVertexCoord)
+      ),
+      new Edge(
+        localCoord(this.coordinateSystem.bottomRightVertexCoord),
+        localCoord(this.coordinateSystem.bottomLeftVertexCoord)
+      ),
+      new Edge(
+        localCoord(this.coordinateSystem.bottomLeftVertexCoord),
+        localCoord(this.coordinateSystem.topLeftVertexCoord)
+      )
     ];
+
+    this.init();
+  }
+
+  init() {}
+
+  get edges(): Array<IEdge> {
+    return [...this._edges];
   }
 
   draw() {

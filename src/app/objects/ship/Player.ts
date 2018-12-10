@@ -1,15 +1,15 @@
 //@ts-ignore
 import Tween from '@tweenjs/tween.js';
 
-import {ObjectState, Size, StageObject, Position, IPosition} from "../StageObject";
+import {IPosition, ObjectState, Position, Size, StageObject} from "../StageObject";
 import {Canvas} from "Canvas";
 import {Stage} from "Stage/Stage";
 import {ControlObserver} from "Control/ControlObserver";
-import {Direction} from "Control/Direction";
+import {Direction, isHorizontalDirection, isVerticalDirection} from "Control/Direction";
 
-import {State, createState} from '../../generic/State';
-import {HorizPosition, VertPosition} from "Object/StageObjectPositioner";
-import {Coordinate, ICoordinate} from "Canvas/Coordinate";
+import {createState, State} from '../../generic/State';
+import {ICoordinate} from "Canvas/Coordinate";
+import {IEdge} from "Canvas/Edge";
 
 const X_MOVEMENT_UNITS = 40;
 const Y_MOVEMENT_UNITS = 30;
@@ -26,7 +26,7 @@ export class Player implements StageObject
     this.state = createState<PlayerState>({
       isMoving: false,
       position: Position(0, 0),
-      velocity: 150,
+      velocity: 50,
       clipMode: false
     });
 
@@ -71,16 +71,49 @@ export class Player implements StageObject
     let lastDirection: Direction | null = null;
     let tween: any;
 
-    const animate = (dx: number, dy: number) => {
+    const canMoveTo = (direction: Direction, edges: Array<IEdge>) => {
+      const _canMoveTo = (direction: Direction, edge: IEdge) => {
+        switch (direction) {
+          case Direction.up:
+            return this.state.position.y > edge.lowY;
+
+          case Direction.down:
+            return this.state.position.y < edge.highY;
+
+          case Direction.left:
+            return this.state.position.x > edge.lowX;
+
+          case Direction.right:
+            return this.state.position.x < edge.highX;
+        }
+      };
+console.log(edges, this.state.position);
+      if (edges.length === 1) {
+        return _canMoveTo(direction, edges[0]);
+      }
+      else if (edges.length === 2) {
+        return _canMoveTo(direction, edges[0]) || _canMoveTo(direction, edges[1]);
+      }
+      return false;
+    };
+
+    const animate = (dx: number, dy: number, edges: Array<IEdge>, direction: Direction) => {
       const destPos: IPosition = Position(
-        Math.round(this.state.position.x + dx * this.xMovementDist),
-        Math.round(this.state.position.y + dy * this.yMovementDist)
+        this.state.position.x + dx * this.xMovementDist,
+        this.state.position.y + dy * this.yMovementDist
       );
 
-      if (destPos.x < 0) destPos.x = 0;
-      if (destPos.y < 0) destPos.y = 0;
-      if (destPos.x > this.stage.width) destPos.x = this.stage.width;
-      if (destPos.y > this.stage.height) destPos.y = this.stage.height;
+      if (isHorizontalDirection(direction)) {
+        const horizEdge = <IEdge>edges.find(edge => edge.isHorizontal);
+        if (destPos.x < horizEdge.lowX) destPos.x = horizEdge.lowX;
+        if (destPos.x > horizEdge.highX) destPos.x = horizEdge.highX;
+      }
+
+      if (isVerticalDirection(direction)) {
+        const vertEdge = <IEdge>edges.find(edge => edge.isVertical);
+        if (destPos.y < vertEdge.lowY) destPos.y = vertEdge.lowY;
+        if (destPos.y > vertEdge.highY) destPos.y = vertEdge.highY;
+      }
 
       return new Tween.Tween(this.state.position)
         .to(destPos, this.state.velocity)
@@ -103,26 +136,27 @@ export class Player implements StageObject
       else {
         if (this.state.isMoving) return;
       }
-// console.log(this.state.position);
+
+      const edges = <IEdge[]>this.stage.edges.filter((edge: IEdge) => {
+        return edge.contains(this.state.position);
+      });
+
+      if (!canMoveTo(direction, edges)) return;
       switch (direction) {
         case Direction.right:
-          if (this.state.position.y > 0 && this.state.position.y < this.stage.height) return;
-          tween = animate(1, 0);
+          tween = animate(1, 0, edges, direction);
           break;
 
         case Direction.left:
-          if (this.state.position.y > 0 && this.state.position.y < this.stage.height) return;
-          tween = animate(-1, 0);
+          tween = animate(-1, 0, edges, direction);
           break;
 
         case Direction.up:
-          if (this.state.position.x > 0 && this.state.position.x < this.stage.width) return;
-          tween = animate(0, -1);
+          tween = animate(0, -1, edges, direction);
           break;
 
         case Direction.down:
-          if (this.state.position.x > 0 && this.state.position.x < this.stage.width) return;
-          tween = animate(0, 1);
+          tween = animate(0, 1, edges, direction);
           break;
       }
       lastDirection = direction;

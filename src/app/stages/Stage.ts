@@ -2,6 +2,7 @@ import { Canvas } from "Canvas";
 import { StageObject } from "Object/StageObject";
 import { StageObjectPositioner } from "Object/StageObjectPositioner";
 import { CoordinateSystem } from "Canvas/CoordinateSystem";
+import {IEdge} from "Canvas/Edge";
 
 export interface Stage
 {
@@ -13,6 +14,10 @@ export interface Stage
   readonly width: number;
   readonly height: number;
 
+  edges: Array<IEdge>;
+  
+
+  init(): void;
 
   draw(): void;
 

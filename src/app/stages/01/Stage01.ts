@@ -3,10 +3,57 @@ import { Canvas } from "Canvas";
 
 import { pathStyle, applyStyle } from 'Style/index';
 import { BaseStage } from "../BaseStage";
-import {ICoordinate} from "Canvas/Coordinate";
+import {Coordinate, ICoordinate} from "Canvas/Coordinate";
+import {Edge, IEdge} from "Canvas/Edge";
 
 
 export default class Stage01 extends BaseStage implements Stage {
+  init() {
+    super.init();
+    //
+    // this.vertices = [
+    //   this.coordinateSystem.topLeftVertexCoord,
+    //   this.coordinateSystem.topRightVertexCoord,
+    //   Coordinate(this.coordinateSystem.bottomRightVertexCoord.x, this.coordinateSystem.bottomRightVertexCoord.y * 0.75),
+    //   Coordinate(this.coordinateSystem.bottomRightVertexCoord.x * 0.75, this.coordinateSystem.bottomRightVertexCoord.y * 0.75),
+    //   Coordinate(this.coordinateSystem.bottomRightVertexCoord.x * 0.75, this.coordinateSystem.bottomRightVertexCoord.y),
+    //   this.coordinateSystem.bottomLeftVertexCoord
+    // ];
+    //
+
+    const localCoord = this.coordinateSystem.toLocalCoord.bind(this.coordinateSystem);
+    this._edges = [
+      new Edge(
+        localCoord(this.coordinateSystem.topLeftVertexCoord),
+        localCoord(this.coordinateSystem.topRightVertexCoord)
+      ),
+      new Edge(
+        localCoord(this.coordinateSystem.topRightVertexCoord),
+        localCoord(Coordinate(this.coordinateSystem.bottomRightVertexCoord.x, this.coordinateSystem.bottomRightVertexCoord.y * 0.75))
+      ),
+      new Edge(
+        localCoord(Coordinate(this.coordinateSystem.bottomRightVertexCoord.x, this.coordinateSystem.bottomRightVertexCoord.y * 0.75)),
+        localCoord(Coordinate(this.coordinateSystem.bottomRightVertexCoord.x * 0.75, this.coordinateSystem.bottomRightVertexCoord.y * 0.75))
+      ),
+      new Edge(
+        localCoord(Coordinate(this.coordinateSystem.bottomRightVertexCoord.x * 0.75, this.coordinateSystem.bottomRightVertexCoord.y * 0.75)),
+        localCoord(Coordinate(this.coordinateSystem.bottomRightVertexCoord.x * 0.75, this.coordinateSystem.bottomRightVertexCoord.y))
+      ),
+      new Edge(
+        localCoord(Coordinate(this.coordinateSystem.bottomRightVertexCoord.x * 0.75, this.coordinateSystem.bottomRightVertexCoord.y)),
+        localCoord(this.coordinateSystem.bottomLeftVertexCoord)
+      ),
+      // new Edge(
+      //   Coordinate(this.coordinateSystem.topRightVertexCoord.x * 0.75, this.coordinateSystem.topRightVertexCoord.y),
+      //   this.coordinateSystem.bottomLeftVertexCoord
+      // ),
+      new Edge(
+        localCoord(this.coordinateSystem.bottomLeftVertexCoord),
+        localCoord(this.coordinateSystem.topLeftVertexCoord)
+      )
+    ];
+  }
+
   drawCanvas() {
     super.drawCanvas();
 
@@ -22,16 +69,13 @@ export default class Stage01 extends BaseStage implements Stage {
     ctx.strokeStyle = "white";
     ctx.beginPath();
 
-    this.vertices.forEach((vertex: ICoordinate, idx) => {
-      if (idx === 0) {
-        ctx.moveTo(vertex.x, vertex.y);
-      }
-      else {
-        ctx.lineTo(vertex.x, vertex.y);
-      }
-    });
+    const startCoord = this.coordinateSystem.toGlobalCoord(this.edges[0].p1);
+    ctx.moveTo(startCoord.x, startCoord.y);
 
-    ctx.lineTo(this.vertices[0].x, this.vertices[0].y);
+    this.edges.forEach((edge: IEdge) => {
+      const coord = this.coordinateSystem.toGlobalCoord(edge.p2);
+      ctx.lineTo(coord.x, coord.y);
+    });
 
     style(pathStyle);
     ctx.stroke();
