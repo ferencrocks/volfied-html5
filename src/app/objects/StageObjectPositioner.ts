@@ -1,5 +1,5 @@
 import {Stage} from "Stage/Stage";
-import {ObjectPosition, StageObject} from "Object/StageObject";
+import {IPosition, StageObject} from "Object/StageObject";
 
 export enum VertPosition {
   top ='TOP',
@@ -17,11 +17,11 @@ export type Position = [HorizPosition | number, VertPosition | number];
 
 export type StageObjectPositionerConstructor = (stage: Stage) => StageObjectPositioner;
 
-export type StageObjectPositioner = (object: StageObject, position: Position) => ObjectPosition;
+export type StageObjectPositioner = (object: StageObject, position: Position) => IPosition;
 
 export const createStageObjectPosition: StageObjectPositionerConstructor =
   (stage: Stage): StageObjectPositioner =>
-    (object: StageObject, [horiz, vert]: Position): ObjectPosition => {
+    (object: StageObject, [horiz, vert]: Position): IPosition => {
       let x : number = 0, y: number = 0;
 
       switch (horiz) {
@@ -52,7 +52,7 @@ export const createStageObjectPosition: StageObjectPositionerConstructor =
       }
 
       return {
-        x: stage.padding + x,
-        y: stage.padding + y
+        x: stage.coordinateSystem.topLeftVertexCoord.x + x,
+        y: stage.coordinateSystem.topLeftVertexCoord.y + y
       };
     };

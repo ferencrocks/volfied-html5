@@ -1,5 +1,5 @@
 export const pathStyle = {
-  lineWidth: 3,
+  lineWidth: 5,
   strokeStyle: 'red'
 };
 

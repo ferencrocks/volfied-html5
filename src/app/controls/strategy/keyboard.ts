@@ -67,15 +67,10 @@ export const keyboardArrow$: Observable<Direction> =
   .pipe( share() );
 
 const isSpace = (evt:KeyboardEvent) => evt.key === ' ';
-export const spaceDown$: Observable<KeyboardEvent> = keyDown$.pipe( filter(isSpace) );
-export const spaceUp$: Observable<KeyboardEvent> = keyUp$.pipe( filter(isSpace) );
-export const space$: Observable<KeyboardEvent> = merge<KeyboardEvent, KeyboardEvent>(spaceUp$, spaceDown$);
-
-export const arrowWithSpaceDown$: Observable<string> = keyboardArrow$
-  .pipe( withLatestFrom<string, KeyboardEvent>(space$) )
-  .pipe( filter(([arrow, space]) => space.type === 'keydown' ) )
-  .pipe( map(([arrow, _]) => arrow) );
+export const spaceDown$: Observable<boolean> = merge( keyDown$.pipe(filter(isSpace)), keyUp$.pipe(filter(isSpace)) )
+  .pipe( map((event: KeyboardEvent) => event.type === 'keydown') );
 
 export const observers: ObserverConstructorArgs = {
-  direction$: keyboardArrow$
+  direction$: keyboardArrow$,
+  clipMode$: spaceDown$
 };

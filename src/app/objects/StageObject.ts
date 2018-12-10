@@ -1,10 +1,11 @@
 import { Canvas } from "Canvas";
-import { Coordinate } from "Canvas/Coordinate";
+import { Coordinate, ICoordinate } from "Canvas/Coordinate";
 
 import { Stage } from "Stage/Stage";
 import { State } from "../generic/State";
 
-export interface ObjectPosition extends Coordinate {}
+export interface IPosition extends ICoordinate {}
+export const Position = Coordinate;
 
 export interface Size {
   height: number;
@@ -18,11 +19,11 @@ export interface StageObject
   readonly stage: Stage;
   readonly state: State<ObjectState>
 
-  draw(canvas: Canvas): void;
+  draw(canvas: Canvas, position: IPosition): void;
 }
 
 export interface ObjectState {
   readonly isMoving: boolean,
-  readonly position: ObjectPosition,
+  readonly position: IPosition,
   readonly velocity: number // distance per second
 }
