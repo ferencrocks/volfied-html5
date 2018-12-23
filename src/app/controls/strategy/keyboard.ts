@@ -72,5 +72,5 @@ export const spaceDown$: Observable<boolean> = merge( keyDown$.pipe(filter(isSpa
 
 export const observers: ObserverConstructorArgs = {
   direction$: keyboardArrow$,
-  clipMode$: spaceDown$
+  cutMode$: spaceDown$
 };

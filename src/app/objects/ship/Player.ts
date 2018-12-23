@@ -5,7 +5,7 @@ import {IPosition, ObjectState, Position, Size, StageObject} from "../StageObjec
 import {Canvas} from "Canvas";
 import {Stage} from "Stage/Stage";
 import {ControlObserver} from "Control/ControlObserver";
-import {Direction, isHorizontalDirection, isVerticalDirection} from "Control/Direction";
+import {Direction, isDirectionPerpendicularTo, isHorizontalDirection, isVerticalDirection} from "Control/Direction";
 
 import {createState, State} from '../../generic/State';
 import {ICoordinate} from "Canvas/Coordinate";
@@ -16,7 +16,8 @@ const Y_MOVEMENT_UNITS = 30;
 
 
 interface PlayerState extends ObjectState {
-  clipMode: boolean
+  cutMode: boolean,
+  direction: Direction
 }
 
 
@@ -24,12 +25,14 @@ export class Player implements StageObject
 {
   constructor(readonly stage: Stage, readonly controlObserver: ControlObserver) {
     this.state = createState<PlayerState>({
+      direction: Direction.up,
       isMoving: false,
       position: Position(0, 0),
       velocity: 50,
-      clipMode: false
+      cutMode: false
     });
 
+    this.currentEdges = this.findCurrentEdges();
     this.observeClipMode();
     this.observeMovement();
   }
@@ -41,6 +44,17 @@ export class Player implements StageObject
 
   state: State<PlayerState>;
 
+  currentEdges: IEdge[];
+
+  /**
+   * @return {IEdge[]} One or two edges on which the object stays
+   */
+  protected findCurrentEdges(): IEdge[] {
+    const edges = <IEdge[]>this.stage.edges.filter((edge: IEdge) => {
+      return edge.contains(this.state.position);
+    });
+    return edges;
+  }
 
   draw(canvas: Canvas, coord: ICoordinate) {
     const ctx = canvas.context;
@@ -60,103 +74,119 @@ export class Player implements StageObject
   }
 
   observeClipMode() {
-    this.controlObserver.clipMode$.subscribe((clipMode) => {
-      if (this.state.clipMode === clipMode) return;
-      this.state.mutate({ clipMode });
-      console.log(clipMode);
+    this.controlObserver.cutMode$.subscribe((cutMode) => {
+      if (this.state.cutMode === cutMode) return;
+      this.state.mutate({ cutMode });
     })
+  }
+
+  canMoveTo(direction: Direction): boolean {
+    if (this.state.cutMode) {
+      return false;
+    }
+
+    const _canMoveTo = (direction: Direction, edge: IEdge) => {
+      switch (direction) {
+        case Direction.up:
+          return this.state.position.y > edge.lowY;
+
+        case Direction.down:
+          return this.state.position.y < edge.highY;
+
+        case Direction.left:
+          return this.state.position.x > edge.lowX;
+
+        case Direction.right:
+          return this.state.position.x < edge.highX;
+      }
+    };
+
+    const edges = this.currentEdges;
+    if (edges.length === 1) {
+      return _canMoveTo(direction, edges[0]);
+    }
+    else if (edges.length === 2) {
+      return _canMoveTo(direction, edges[0]) || _canMoveTo(direction, edges[1]);
+    }
+    return false;
+  }
+
+  move(dx: number, dy: number) {
+    // The destination position
+    const destPos: IPosition = Position(
+      this.state.position.x + dx * this.xMovementDist,
+      this.state.position.y + dy * this.yMovementDist
+    );
+
+    /* The player can move only until one of the 2 endpoints of the current Edge. These blocks are fixing the
+     * destination position, if the destination point goes over one of these endpoints. */
+    if (isHorizontalDirection(this.state.direction)) {
+      const horizEdge = this.currentEdges.find(edge => edge.isHorizontal);
+      if (!horizEdge) return;
+
+      if (destPos.x < horizEdge.lowX) destPos.x = horizEdge.lowX;
+      if (destPos.x > horizEdge.highX) destPos.x = horizEdge.highX;
+    }
+    if (isVerticalDirection(this.state.direction)) {
+      const vertEdge = this.currentEdges.find(edge => edge.isVertical);
+      if (!vertEdge) return;
+
+      if (destPos.y < vertEdge.lowY) destPos.y = vertEdge.lowY;
+      if (destPos.y > vertEdge.highY) destPos.y = vertEdge.highY;
+    }
+console.log('MOVE');
+    // Tweening the subsequent animation frames of the object, while updating states at every frame.
+    return new Tween.Tween(this.state.position)
+      .to(destPos, this.state.velocity)
+      .onStart(() => {
+        this.state.mutate({isMoving: true});
+      })
+      .onComplete(() => {
+        this.state.mutate({isMoving: false});
+        this.currentEdges = this.findCurrentEdges();
+      })
+      .onStop(() => {
+        this.currentEdges = this.findCurrentEdges();
+      })
+      .onUpdate((tmpPos: IPosition) => {
+        this.state.mutate({ position: tmpPos });
+      })
+      .start();
   }
 
   observeMovement() {
     let lastDirection: Direction | null = null;
     let tween: any;
 
-    const canMoveTo = (direction: Direction, edges: Array<IEdge>) => {
-      const _canMoveTo = (direction: Direction, edge: IEdge) => {
-        switch (direction) {
-          case Direction.up:
-            return this.state.position.y > edge.lowY;
-
-          case Direction.down:
-            return this.state.position.y < edge.highY;
-
-          case Direction.left:
-            return this.state.position.x > edge.lowX;
-
-          case Direction.right:
-            return this.state.position.x < edge.highX;
-        }
-      };
-console.log(edges, this.state.position);
-      if (edges.length === 1) {
-        return _canMoveTo(direction, edges[0]);
-      }
-      else if (edges.length === 2) {
-        return _canMoveTo(direction, edges[0]) || _canMoveTo(direction, edges[1]);
-      }
-      return false;
-    };
-
-    const animate = (dx: number, dy: number, edges: Array<IEdge>, direction: Direction) => {
-      const destPos: IPosition = Position(
-        this.state.position.x + dx * this.xMovementDist,
-        this.state.position.y + dy * this.yMovementDist
-      );
-
-      if (isHorizontalDirection(direction)) {
-        const horizEdge = <IEdge>edges.find(edge => edge.isHorizontal);
-        if (destPos.x < horizEdge.lowX) destPos.x = horizEdge.lowX;
-        if (destPos.x > horizEdge.highX) destPos.x = horizEdge.highX;
-      }
-
-      if (isVerticalDirection(direction)) {
-        const vertEdge = <IEdge>edges.find(edge => edge.isVertical);
-        if (destPos.y < vertEdge.lowY) destPos.y = vertEdge.lowY;
-        if (destPos.y > vertEdge.highY) destPos.y = vertEdge.highY;
-      }
-
-      return new Tween.Tween(this.state.position)
-        .to(destPos, this.state.velocity)
-        .onStart(() => {
-          this.state.mutate({isMoving: true});
-        })
-        .onComplete(() => {
-          this.state.mutate({isMoving: false});
-        })
-        .onUpdate((tmpPos: IPosition) => {
-          this.state.mutate({ position: tmpPos });
-        })
-        .start();
-    };
-
+    // Listening to the control inputs
     this.controlObserver.direction$.subscribe((direction: Direction) => {
+      if (!this.canMoveTo(direction)) return;
+
       if (direction !== lastDirection) {
+        this.state.mutate({ direction });
+        // Stopping the current tween, if the direction is changed
         if (tween) tween.stop();
       }
       else {
+        // Do not start other tween if the object is still moving
         if (this.state.isMoving) return;
       }
 
-      const edges = <IEdge[]>this.stage.edges.filter((edge: IEdge) => {
-        return edge.contains(this.state.position);
-      });
-
-      if (!canMoveTo(direction, edges)) return;
       switch (direction) {
         case Direction.right:
-          tween = animate(1, 0, edges, direction);
+          tween = this.move(1, 0);
           break;
 
         case Direction.left:
-          tween = animate(-1, 0, edges, direction);
+          tween = this.move(-1, 0);
           break;
 
         case Direction.up:
-          tween = animate(0, -1, edges, direction);
+          tween = this.move(0, -1);
           break;
 
         case Direction.down:
-          tween = animate(0, 1, edges, direction);
+          tween = this.move(0, 1);
           break;
       }
       lastDirection = direction;
